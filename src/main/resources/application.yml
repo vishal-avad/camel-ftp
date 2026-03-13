@@ -1,0 +1,38 @@
+sftp:
+  source:
+    path: /source
+  destination:
+    path: /destination
+  token:
+    file:
+      extension: .done
+  file:
+    pattern: "*.csv"
+  # SFTP connection settings (used only when transfer.mode=sftp)
+  host: localhost
+  port: 22
+  username: user
+  password: password
+
+# Transfer mode: 'local' for local file system testing, 'sftp' for real SFTP transfers
+transfer:
+  mode: local
+
+# Local mode directories (used only when transfer.mode=local)
+local:
+  source:
+    path: ${user.dir}/data/source
+  destination:
+    path: ${user.dir}/data/destination
+
+# Camel configuration
+camel:
+  springboot:
+    main-run-controller: true
+
+# Logging
+logging:
+  level:
+    com.example.camelftp: INFO
+    org.apache.camel: INFO
+

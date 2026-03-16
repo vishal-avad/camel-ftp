@@ -33,11 +33,12 @@ public class SftpFileTransferRoute extends RouteBuilder {
     public void configure() throws Exception {
         String tokenExt = props.getToken().getFile().getExtension();
         String filePattern = props.getFile().getPattern();
+        String authParams = buildAuthParams();
 
         // Source SFTP endpoint: poll for files that have a matching token (done) file
         String sourceUri = String.format(
             "sftp://%s@%s:%d%s"
-                + "?password=%s"
+                + "?%s"
                 + "&antInclude=%s"
                 + "&doneFileName=${file:name}%s"
                 + "&idempotent=true"
@@ -49,7 +50,7 @@ public class SftpFileTransferRoute extends RouteBuilder {
             props.getHost(),
             props.getPort(),
             props.getSource().getPath(),
-            props.getPassword(),
+            authParams,
             filePattern,
             tokenExt
         );
@@ -57,24 +58,24 @@ public class SftpFileTransferRoute extends RouteBuilder {
         // Destination SFTP endpoint for data files
         String destUri = String.format(
             "sftp://%s@%s:%d%s"
-                + "?password=%s"
+                + "?%s"
                 + "&tempFileName=${file:name}.tmp",
             props.getUsername(),
             props.getHost(),
             props.getPort(),
             props.getDestination().getPath(),
-            props.getPassword()
+            authParams
         );
 
         // Destination SFTP endpoint for token files
         String destTokenUri = String.format(
             "sftp://%s@%s:%d%s"
-                + "?password=%s",
+                + "?%s",
             props.getUsername(),
             props.getHost(),
             props.getPort(),
             props.getDestination().getPath(),
-            props.getPassword()
+            authParams
         );
 
         from(sourceUri)
@@ -90,6 +91,26 @@ public class SftpFileTransferRoute extends RouteBuilder {
                     .to(destTokenUri)
                     .log(LoggingLevel.INFO, "Token file created at destination: ${header.CamelFileName}")
             .end();
+    }
+
+    /**
+     * Builds the authentication query parameters for the SFTP URI.
+     * If a private key file is configured, uses SSH key-based authentication.
+     * Otherwise, falls back to password-based authentication.
+     */
+    private String buildAuthParams() {
+        String privateKeyFile = props.getPrivateKeyFile();
+        if (privateKeyFile != null && !privateKeyFile.isBlank()) {
+            StringBuilder params = new StringBuilder();
+            params.append("privateKeyFile=").append(privateKeyFile);
+            params.append("&useUserKnownHostsFile=false");
+            String passphrase = props.getPrivateKeyPassphrase();
+            if (passphrase != null && !passphrase.isBlank()) {
+                params.append("&privateKeyPassphrase=").append(passphrase);
+            }
+            return params.toString();
+        }
+        return "password=" + props.getPassword();
     }
 }
 

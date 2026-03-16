@@ -15,6 +15,8 @@ public class SftpProperties {
     private int port = 22;
     private String username = "user";
     private String password = "password";
+    private String privateKeyFile;
+    private String privateKeyPassphrase;
 
     public Source getSource() { return source; }
     public void setSource(Source source) { this.source = source; }
@@ -32,6 +34,10 @@ public class SftpProperties {
     public void setUsername(String username) { this.username = username; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    public String getPrivateKeyFile() { return privateKeyFile; }
+    public void setPrivateKeyFile(String privateKeyFile) { this.privateKeyFile = privateKeyFile; }
+    public String getPrivateKeyPassphrase() { return privateKeyPassphrase; }
+    public void setPrivateKeyPassphrase(String privateKeyPassphrase) { this.privateKeyPassphrase = privateKeyPassphrase; }
 
     public static class Source {
         private String path = "/source";

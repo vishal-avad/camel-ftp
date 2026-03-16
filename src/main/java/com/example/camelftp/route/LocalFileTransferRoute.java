@@ -51,6 +51,7 @@ public class LocalFileTransferRoute extends RouteBuilder {
                 + "&idempotent=true"
                 + "&noop=true"
                 + "&readLock=changed"
+                + "&readLockMinLength=0"
                 + "&delay=5000",
             localSourcePath,
             filePattern,
@@ -72,11 +73,16 @@ public class LocalFileTransferRoute extends RouteBuilder {
         from(sourceUri)
             .routeId("local-file-transfer")
             .log(LoggingLevel.INFO, "Picked up file from local source: ${header.CamelFileName}")
-            .to(destUri)
-            .log(LoggingLevel.INFO, "File written to local destination: ${header.CamelFileName}")
-            .process(tokenFileProcessor)
-            .to(destTokenUri)
-            .log(LoggingLevel.INFO, "Token file created at local destination: ${header.CamelFileName}");
+            .choice()
+                .when(simple("${header.CamelFileLength} == 0"))
+                    .log(LoggingLevel.WARN, "File is empty, skipping transfer: ${header.CamelFileName}")
+                .otherwise()
+                    .to(destUri)
+                    .log(LoggingLevel.INFO, "File written to local destination: ${header.CamelFileName}")
+                    .process(tokenFileProcessor)
+                    .to(destTokenUri)
+                    .log(LoggingLevel.INFO, "Token file created at local destination: ${header.CamelFileName}")
+            .end();
     }
 }
 

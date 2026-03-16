@@ -43,6 +43,7 @@ public class SftpFileTransferRoute extends RouteBuilder {
                 + "&idempotent=true"
                 + "&noop=true"
                 + "&readLock=changed"
+                + "&readLockMinLength=0"
                 + "&delay=5000",
             props.getUsername(),
             props.getHost(),
@@ -79,11 +80,16 @@ public class SftpFileTransferRoute extends RouteBuilder {
         from(sourceUri)
             .routeId("sftp-file-transfer")
             .log(LoggingLevel.INFO, "Picked up file from source: ${header.CamelFileName}")
-            .to(destUri)
-            .log(LoggingLevel.INFO, "File written to destination: ${header.CamelFileName}")
-            .process(tokenFileProcessor)
-            .to(destTokenUri)
-            .log(LoggingLevel.INFO, "Token file created at destination: ${header.CamelFileName}");
+            .choice()
+                .when(simple("${header.CamelFileLength} == 0"))
+                    .log(LoggingLevel.WARN, "File is empty, skipping transfer: ${header.CamelFileName}")
+                .otherwise()
+                    .to(destUri)
+                    .log(LoggingLevel.INFO, "File written to destination: ${header.CamelFileName}")
+                    .process(tokenFileProcessor)
+                    .to(destTokenUri)
+                    .log(LoggingLevel.INFO, "Token file created at destination: ${header.CamelFileName}")
+            .end();
     }
 }
 

@@ -34,6 +34,8 @@ public class SftpFileTransferRoute extends RouteBuilder {
         String tokenExt = props.getToken().getFile().getExtension();
         String filePattern = props.getFile().getPattern();
         String authParams = buildAuthParams();
+        String sourcePath = toAbsoluteSftpPath(props.getSource().getPath());
+        String destPath = toAbsoluteSftpPath(props.getDestination().getPath());
 
         // Source SFTP endpoint: poll for files that have a matching token (done) file
         String sourceUri = String.format(
@@ -49,7 +51,7 @@ public class SftpFileTransferRoute extends RouteBuilder {
             props.getUsername(),
             props.getHost(),
             props.getPort(),
-            props.getSource().getPath(),
+            sourcePath,
             authParams,
             filePattern,
             tokenExt
@@ -63,7 +65,7 @@ public class SftpFileTransferRoute extends RouteBuilder {
             props.getUsername(),
             props.getHost(),
             props.getPort(),
-            props.getDestination().getPath(),
+            destPath,
             authParams
         );
 
@@ -74,7 +76,7 @@ public class SftpFileTransferRoute extends RouteBuilder {
             props.getUsername(),
             props.getHost(),
             props.getPort(),
-            props.getDestination().getPath(),
+            destPath,
             authParams
         );
 
@@ -98,6 +100,21 @@ public class SftpFileTransferRoute extends RouteBuilder {
      * If a private key file is configured, uses SSH key-based authentication.
      * Otherwise, falls back to password-based authentication.
      */
+    /**
+     * Converts a configured path to an absolute SFTP URI path.
+     * In Camel's SFTP URI, a single slash after the host (e.g., sftp://host:22/path)
+     * is treated as relative to the user's home directory. To use an absolute path
+     * on the remote server, a double slash is required (e.g., sftp://host:22//path).
+     * This method ensures that paths starting with '/' are prefixed with an extra '/'
+     * so they are interpreted as absolute.
+     */
+    private String toAbsoluteSftpPath(String path) {
+        if (path != null && path.startsWith("/")) {
+            return "/" + path;
+        }
+        return path;
+    }
+
     private String buildAuthParams() {
         String privateKeyFile = props.getPrivateKeyFile();
         if (privateKeyFile != null && !privateKeyFile.isBlank()) {

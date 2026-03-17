@@ -28,8 +28,11 @@ public class LocalFileTransferRoute extends RouteBuilder {
     @Value("${local.destination.path}")
     private String localDestinationPath;
 
-    @Value("${sftp.token.file.extension:}")
-    private String tokenExtension;
+    @Value("${sftp.source.token-file-extension:}")
+    private String sourceTokenExtension;
+
+    @Value("${sftp.destination.token-file-extension:}")
+    private String destTokenExtension;
 
     @Value("${sftp.file.pattern}")
     private String filePattern;
@@ -42,13 +45,14 @@ public class LocalFileTransferRoute extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
-        boolean tokenEnabled = tokenExtension != null && !tokenExtension.isBlank();
+        boolean sourceTokenEnabled = sourceTokenExtension != null && !sourceTokenExtension.isBlank();
+        boolean destTokenEnabled = destTokenExtension != null && !destTokenExtension.isBlank();
 
         // Source: poll local directory for files, optionally requiring a token (done) file
         StringBuilder sourceUriBuilder = new StringBuilder();
         sourceUriBuilder.append(String.format("file://%s?antInclude=%s", localSourcePath, filePattern));
-        if (tokenEnabled) {
-            sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", tokenExtension));
+        if (sourceTokenEnabled) {
+            sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", sourceTokenExtension));
         }
         sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
         String sourceUri = sourceUriBuilder.toString();
@@ -75,7 +79,7 @@ public class LocalFileTransferRoute extends RouteBuilder {
                     .to(destUri)
                     .log(LoggingLevel.INFO, "File written to local destination: ${header.CamelFileName}");
 
-        if (tokenEnabled) {
+        if (destTokenEnabled) {
             route
                     .process(tokenFileProcessor)
                     .to(destTokenUri)

@@ -31,8 +31,10 @@ public class SftpFileTransferRoute extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
-        String tokenExt = props.getToken().getFile().getExtension();
-        boolean tokenEnabled = tokenExt != null && !tokenExt.isBlank();
+        String sourceTokenExt = props.getSource().getTokenFileExtension();
+        boolean sourceTokenEnabled = sourceTokenExt != null && !sourceTokenExt.isBlank();
+        String destTokenExt = props.getDestination().getTokenFileExtension();
+        boolean destTokenEnabled = destTokenExt != null && !destTokenExt.isBlank();
         String filePattern = props.getFile().getPattern();
         String authParams = buildAuthParams();
         String sourcePath = toAbsoluteSftpPath(props.getSource().getPath());
@@ -45,8 +47,8 @@ public class SftpFileTransferRoute extends RouteBuilder {
             props.getUsername(), props.getHost(), props.getPort(),
             sourcePath, authParams, filePattern
         ));
-        if (tokenEnabled) {
-            sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", tokenExt));
+        if (sourceTokenEnabled) {
+            sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", sourceTokenExt));
         }
         sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
         String sourceUri = sourceUriBuilder.toString();
@@ -75,7 +77,7 @@ public class SftpFileTransferRoute extends RouteBuilder {
                     .to(destUri)
                     .log(LoggingLevel.INFO, "File written to destination: ${header.CamelFileName}");
 
-        if (tokenEnabled) {
+        if (destTokenEnabled) {
             route
                     .process(tokenFileProcessor)
                     .to(destTokenUri)

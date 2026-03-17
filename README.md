@@ -1,6 +1,6 @@
 # Camel FTP
 
-A Spring Boot application using Apache Camel to perform SFTP (and local) file transfers with an **optional token file pattern**. When configured, files are only picked up when a corresponding token file is present at the source, and a token file is generated at the destination after each successful transfer. When the token file extension is not configured, files are transferred directly without any token file logic.
+A Spring Boot application using Apache Camel to perform SFTP (and local) file transfers with an **optional token file pattern**. The source and destination token file configurations are independent — each can be enabled or disabled separately. When not configured, files are transferred directly without token file logic on that side.
 
 ## Prerequisites
 
@@ -40,9 +40,10 @@ All settings are in `src/main/resources/application.yml`. Properties can also be
 | Property | Default | Description |
 |---|---|---|
 | `sftp.source.path` | `/source` | Source directory to poll for files. |
+| `sftp.source.token-file-extension` | *(none)* | **Optional.** If set, files are only picked up when a corresponding token file exists at the source (e.g., `.done` requires `data.csv.done` alongside `data.csv`). If empty or not set, files are picked up immediately without requiring a token file. |
 | `sftp.destination.path` | `/destination` | Destination directory to write files to. |
+| `sftp.destination.token-file-extension` | `.done` | **Optional.** If set, a token file with this extension is created at the destination after a successful transfer (e.g., `data.csv` → `data.csv.done`). If empty or not set, no token file is created. |
 | `sftp.file.pattern` | `*.csv` | Ant-style glob pattern to filter which files to pick up (e.g., `*.csv`, `*.txt`, `*.xml`). |
-| `sftp.token.file.extension` | *(none)* | **Optional.** Extension appended to the data file name to form the token file name (e.g., `.done` makes `data.csv` → `data.csv.done`). If empty or not set, the token file pattern is disabled — files are transferred without requiring a source token and no token is created at the destination. |
 
 ### SFTP Connection (used when `transfer.mode=sftp`)
 
@@ -69,27 +70,27 @@ If a private key file is configured, it takes precedence over password authentic
 | `local.source.path` | `${user.dir}/data/source` | Local source directory to poll. |
 | `local.destination.path` | `${user.dir}/data/destination` | Local destination directory to write files to. |
 
-## Token File Pattern (Optional)
+## Token File Pattern
 
-The token file pattern is **optional** and controlled by the `sftp.token.file.extension` property.
+The token file configuration is **separate** for source and destination.
 
-### When token file extension is configured (e.g., `.done`)
+### Source side (optional — `sftp.source.token-file-extension`)
 
-**Source side** — A file is only picked up when its corresponding token file exists. For example, to transfer `report.csv`, the source directory must contain both:
+When configured (e.g., `.done`), a file is only picked up when its corresponding token file exists. For example, to transfer `report.csv`, the source directory must contain both:
 ```
 report.csv
 report.csv.done
 ```
+When **not** configured, files are picked up as soon as they match the file pattern — no source token file is required.
 
-**Destination side** — After the data file is fully written to the destination, a token file is created to signal completion:
+### Destination side (optional — `sftp.destination.token-file-extension`)
+
+When configured (e.g., `.done`), a token file is created at the destination after the data file is fully written to signal completion:
 ```
 report.csv          ← data file
 report.csv.done     ← token file (created after write completes)
 ```
-
-### When token file extension is not configured
-
-Files are picked up from the source directory as soon as they match the file pattern — no token file is required at the source, and no token file is created at the destination.
+When **not** configured, only the data file is written — no token file is created at the destination.
 
 ### General behavior
 
@@ -111,7 +112,7 @@ Files are picked up from the source directory as soon as they match the file pat
    mkdir -p data/source data/destination
    echo "id,name,value" > data/source/sample.csv
    ```
-   If the token file extension is configured (e.g., `.done`), also create the token file:
+   If the source token is configured (e.g., `--sftp.source.token-file-extension=.done`), also create the token file:
    ```bash
    echo "" > data/source/sample.csv.done
    ```
@@ -120,12 +121,12 @@ Files are picked up from the source directory as soon as they match the file pat
    ```bash
    java -jar target/camel-ftp-0.0.1-SNAPSHOT.jar
    ```
-   To run without the token file pattern, override the extension to empty:
+   To also require a source token file:
    ```bash
-   java -jar target/camel-ftp-0.0.1-SNAPSHOT.jar --sftp.token.file.extension=""
+   java -jar target/camel-ftp-0.0.1-SNAPSHOT.jar --sftp.source.token-file-extension=.done
    ```
 
-5. **With token enabled**, the logs will show:
+5. The logs will show the file being picked up, written, and the destination token file created:
    ```
    INFO  ... Picked up file from local source: sample.csv
    INFO  ... File written to local destination: sample.csv
@@ -133,13 +134,6 @@ Files are picked up from the source directory as soon as they match the file pat
    INFO  ... Token file created at local destination: sample.csv.done
    ```
    The destination directory will contain both `sample.csv` and `sample.csv.done`.
-
-   **With token disabled**, the logs will show:
-   ```
-   INFO  ... Picked up file from local source: sample.csv
-   INFO  ... File written to local destination: sample.csv
-   ```
-   The destination directory will contain only `sample.csv`.
 
 ## Project Structure
 

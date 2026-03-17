@@ -17,7 +17,7 @@ public class TokenFileProcessor implements Processor {
 
     private static final Logger LOG = LoggerFactory.getLogger(TokenFileProcessor.class);
 
-    @Value("${sftp.token.file.extension:}")
+    @Value("${sftp.destination.token-file-extension:}")
     private String tokenExtension;
 
     @Override

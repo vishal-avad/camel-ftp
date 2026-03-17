@@ -9,7 +9,6 @@ public class SftpProperties {
 
     private Source source = new Source();
     private Destination destination = new Destination();
-    private Token token = new Token();
     private FileConfig file = new FileConfig();
     private String host = "localhost";
     private int port = 22;
@@ -22,8 +21,6 @@ public class SftpProperties {
     public void setSource(Source source) { this.source = source; }
     public Destination getDestination() { return destination; }
     public void setDestination(Destination destination) { this.destination = destination; }
-    public Token getToken() { return token; }
-    public void setToken(Token token) { this.token = token; }
     public FileConfig getFile() { return file; }
     public void setFile(FileConfig file) { this.file = file; }
     public String getHost() { return host; }
@@ -41,26 +38,20 @@ public class SftpProperties {
 
     public static class Source {
         private String path = "/source";
+        private String tokenFileExtension;
         public String getPath() { return path; }
         public void setPath(String path) { this.path = path; }
+        public String getTokenFileExtension() { return tokenFileExtension; }
+        public void setTokenFileExtension(String tokenFileExtension) { this.tokenFileExtension = tokenFileExtension; }
     }
 
     public static class Destination {
         private String path = "/destination";
+        private String tokenFileExtension;
         public String getPath() { return path; }
         public void setPath(String path) { this.path = path; }
-    }
-
-    public static class Token {
-        private FileExtension file = new FileExtension();
-        public FileExtension getFile() { return file; }
-        public void setFile(FileExtension file) { this.file = file; }
-
-        public static class FileExtension {
-            private String extension = "";
-            public String getExtension() { return extension; }
-            public void setExtension(String extension) { this.extension = extension; }
-        }
+        public String getTokenFileExtension() { return tokenFileExtension; }
+        public void setTokenFileExtension(String tokenFileExtension) { this.tokenFileExtension = tokenFileExtension; }
     }
 
     public static class FileConfig {

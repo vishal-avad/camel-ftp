@@ -1,14 +1,16 @@
 sftp:
   source:
     path: /source
+    # Source token file extension (optional). If set, files are only picked up when
+    # a corresponding token file exists at the source. Leave empty or comment out
+    # to pick up files without requiring a token file.
+    # token-file-extension: .done
   destination:
     path: /destination
-  token:
-    file:
-      # Token file extension (optional). If set, files are only picked up when a
-      # corresponding token file exists at the source, and a token file is created
-      # at the destination after transfer. Leave empty or comment out to disable.
-      extension: .done
+    # Destination token file extension (optional). If set, a token file with this
+    # extension is created at the destination after a successful transfer to signal
+    # completion (e.g., data.csv -> data.csv.done). Leave empty or comment out to disable.
+    token-file-extension: .done
   file:
     pattern: "*.csv"
   # SFTP connection settings (used only when transfer.mode=sftp)

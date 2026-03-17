@@ -28,7 +28,7 @@ public class LocalFileTransferRoute extends RouteBuilder {
     @Value("${local.destination.path}")
     private String localDestinationPath;
 
-    @Value("${sftp.token.file.extension}")
+    @Value("${sftp.token.file.extension:}")
     private String tokenExtension;
 
     @Value("${sftp.file.pattern}")
@@ -42,21 +42,16 @@ public class LocalFileTransferRoute extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
+        boolean tokenEnabled = tokenExtension != null && !tokenExtension.isBlank();
 
-        // Source: poll local directory for files with a matching token (done) file
-        String sourceUri = String.format(
-            "file://%s"
-                + "?antInclude=%s"
-                + "&doneFileName=${file:name}%s"
-                + "&idempotent=true"
-                + "&noop=true"
-                + "&readLock=changed"
-                + "&readLockMinLength=0"
-                + "&delay=5000",
-            localSourcePath,
-            filePattern,
-            tokenExtension
-        );
+        // Source: poll local directory for files, optionally requiring a token (done) file
+        StringBuilder sourceUriBuilder = new StringBuilder();
+        sourceUriBuilder.append(String.format("file://%s?antInclude=%s", localSourcePath, filePattern));
+        if (tokenEnabled) {
+            sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", tokenExtension));
+        }
+        sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
+        String sourceUri = sourceUriBuilder.toString();
 
         // Destination: write data file using temp file to ensure atomicity
         String destUri = String.format(
@@ -70,7 +65,7 @@ public class LocalFileTransferRoute extends RouteBuilder {
             localDestinationPath
         );
 
-        from(sourceUri)
+        var route = from(sourceUri)
             .routeId("local-file-transfer")
             .log(LoggingLevel.INFO, "Picked up file from local source: ${header.CamelFileName}")
             .choice()
@@ -78,11 +73,16 @@ public class LocalFileTransferRoute extends RouteBuilder {
                     .log(LoggingLevel.WARN, "File is empty, skipping transfer: ${header.CamelFileName}")
                 .otherwise()
                     .to(destUri)
-                    .log(LoggingLevel.INFO, "File written to local destination: ${header.CamelFileName}")
+                    .log(LoggingLevel.INFO, "File written to local destination: ${header.CamelFileName}");
+
+        if (tokenEnabled) {
+            route
                     .process(tokenFileProcessor)
                     .to(destTokenUri)
-                    .log(LoggingLevel.INFO, "Token file created at local destination: ${header.CamelFileName}")
-            .end();
+                    .log(LoggingLevel.INFO, "Token file created at local destination: ${header.CamelFileName}");
+        }
+
+        route.end();
     }
 }
 

@@ -32,55 +32,40 @@ public class SftpFileTransferRoute extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         String tokenExt = props.getToken().getFile().getExtension();
+        boolean tokenEnabled = tokenExt != null && !tokenExt.isBlank();
         String filePattern = props.getFile().getPattern();
         String authParams = buildAuthParams();
         String sourcePath = toAbsoluteSftpPath(props.getSource().getPath());
         String destPath = toAbsoluteSftpPath(props.getDestination().getPath());
 
-        // Source SFTP endpoint: poll for files that have a matching token (done) file
-        String sourceUri = String.format(
-            "sftp://%s@%s:%d%s"
-                + "?%s"
-                + "&antInclude=%s"
-                + "&doneFileName=${file:name}%s"
-                + "&idempotent=true"
-                + "&noop=true"
-                + "&readLock=changed"
-                + "&readLockMinLength=0"
-                + "&delay=5000",
-            props.getUsername(),
-            props.getHost(),
-            props.getPort(),
-            sourcePath,
-            authParams,
-            filePattern,
-            tokenExt
-        );
+        // Source SFTP endpoint: poll for files, optionally requiring a token (done) file
+        StringBuilder sourceUriBuilder = new StringBuilder();
+        sourceUriBuilder.append(String.format(
+            "sftp://%s@%s:%d%s?%s&antInclude=%s",
+            props.getUsername(), props.getHost(), props.getPort(),
+            sourcePath, authParams, filePattern
+        ));
+        if (tokenEnabled) {
+            sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", tokenExt));
+        }
+        sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
+        String sourceUri = sourceUriBuilder.toString();
 
         // Destination SFTP endpoint for data files
         String destUri = String.format(
-            "sftp://%s@%s:%d%s"
-                + "?%s"
-                + "&tempFileName=${file:name}.tmp",
-            props.getUsername(),
-            props.getHost(),
-            props.getPort(),
-            destPath,
-            authParams
+            "sftp://%s@%s:%d%s?%s&tempFileName=${file:name}.tmp",
+            props.getUsername(), props.getHost(), props.getPort(),
+            destPath, authParams
         );
 
         // Destination SFTP endpoint for token files
         String destTokenUri = String.format(
-            "sftp://%s@%s:%d%s"
-                + "?%s",
-            props.getUsername(),
-            props.getHost(),
-            props.getPort(),
-            destPath,
-            authParams
+            "sftp://%s@%s:%d%s?%s",
+            props.getUsername(), props.getHost(), props.getPort(),
+            destPath, authParams
         );
 
-        from(sourceUri)
+        var route = from(sourceUri)
             .routeId("sftp-file-transfer")
             .log(LoggingLevel.INFO, "Picked up file from source: ${header.CamelFileName}")
             .choice()
@@ -88,11 +73,16 @@ public class SftpFileTransferRoute extends RouteBuilder {
                     .log(LoggingLevel.WARN, "File is empty, skipping transfer: ${header.CamelFileName}")
                 .otherwise()
                     .to(destUri)
-                    .log(LoggingLevel.INFO, "File written to destination: ${header.CamelFileName}")
+                    .log(LoggingLevel.INFO, "File written to destination: ${header.CamelFileName}");
+
+        if (tokenEnabled) {
+            route
                     .process(tokenFileProcessor)
                     .to(destTokenUri)
-                    .log(LoggingLevel.INFO, "Token file created at destination: ${header.CamelFileName}")
-            .end();
+                    .log(LoggingLevel.INFO, "Token file created at destination: ${header.CamelFileName}");
+        }
+
+        route.end();
     }
 
     /**

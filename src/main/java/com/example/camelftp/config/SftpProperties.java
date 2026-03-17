@@ -57,7 +57,7 @@ public class SftpProperties {
         public void setFile(FileExtension file) { this.file = file; }
 
         public static class FileExtension {
-            private String extension = ".done";
+            private String extension = "";
             public String getExtension() { return extension; }
             public void setExtension(String extension) { this.extension = extension; }
         }

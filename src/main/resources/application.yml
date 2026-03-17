@@ -5,6 +5,9 @@ sftp:
     path: /destination
   token:
     file:
+      # Token file extension (optional). If set, files are only picked up when a
+      # corresponding token file exists at the source, and a token file is created
+      # at the destination after transfer. Leave empty or comment out to disable.
       extension: .done
   file:
     pattern: "*.csv"

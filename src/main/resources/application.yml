@@ -5,12 +5,18 @@ sftp:
     # a corresponding token file exists at the source. Leave empty or comment out
     # to pick up files without requiring a token file.
     # token-file-extension: .done
+    # Archive directory (optional). If set, source files are moved here after a
+    # successful transfer. If not set, files remain in the source directory.
+    # archive-path: /source/archive
   destination:
     path: /destination
     # Destination token file extension (optional). If set, a token file with this
     # extension is created at the destination after a successful transfer to signal
     # completion (e.g., data.csv -> data.csv.done). Leave empty or comment out to disable.
     token-file-extension: .done
+    # Archive directory (optional). If set, a copy of the transferred file is also
+    # written to this directory. If not set, no archive copy is created.
+    # archive-path: /destination/archive
   file:
     pattern: "*.csv"
   # SFTP connection settings (used only when transfer.mode=sftp)
@@ -30,8 +36,10 @@ transfer:
 local:
   source:
     path: ${user.dir}/data/source
+    # archive-path: ${user.dir}/data/source/archive
   destination:
     path: ${user.dir}/data/destination
+    # archive-path: ${user.dir}/data/destination/archive
 
 # Camel configuration
 camel:

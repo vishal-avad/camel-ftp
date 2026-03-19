@@ -43,6 +43,8 @@ All settings are in `src/main/resources/application.yml`. Properties can also be
 | `sftp.source.token-file-extension` | *(none)* | **Optional.** If set, files are only picked up when a corresponding token file exists at the source (e.g., `.done` requires `data.csv.done` alongside `data.csv`). If empty or not set, files are picked up immediately without requiring a token file. |
 | `sftp.destination.path` | `/destination` | Destination directory to write files to. |
 | `sftp.destination.token-file-extension` | `.done` | **Optional.** If set, a token file with this extension is created at the destination after a successful transfer (e.g., `data.csv` → `data.csv.done`). If empty or not set, no token file is created. |
+| `sftp.source.archive-path` | *(none)* | **Optional.** If set, source files are moved to this directory after a successful transfer. If not set, files remain in the source directory (tracked by idempotent consumer). |
+| `sftp.destination.archive-path` | *(none)* | **Optional.** If set, a copy of the transferred file is also written to this archive directory at the destination. If not set, no archive copy is created. |
 | `sftp.file.pattern` | `*.csv` | Ant-style glob pattern to filter which files to pick up (e.g., `*.csv`, `*.txt`, `*.xml`). |
 
 ### SFTP Connection (used when `transfer.mode=sftp`)
@@ -91,6 +93,17 @@ report.csv          ← data file
 report.csv.done     ← token file (created after write completes)
 ```
 When **not** configured, only the data file is written — no token file is created at the destination.
+
+## Archive Directory (Optional)
+
+When `sftp.source.archive-path` is configured, source files are **moved** to the archive directory after a successful transfer instead of remaining in the source directory. When `sftp.destination.archive-path` is configured, a **copy** of each transferred file is written to the destination archive directory.
+
+Both archive settings are independent and optional. Example:
+```bash
+java -jar target/camel-ftp-0.0.1-SNAPSHOT.jar \
+  --sftp.source.archive-path=/source/archive \
+  --sftp.destination.archive-path=/destination/archive
+```
 
 ### General behavior
 

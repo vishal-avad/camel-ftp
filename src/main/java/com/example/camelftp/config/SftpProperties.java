@@ -39,19 +39,25 @@ public class SftpProperties {
     public static class Source {
         private String path = "/source";
         private String tokenFileExtension;
+        private String archivePath;
         public String getPath() { return path; }
         public void setPath(String path) { this.path = path; }
         public String getTokenFileExtension() { return tokenFileExtension; }
         public void setTokenFileExtension(String tokenFileExtension) { this.tokenFileExtension = tokenFileExtension; }
+        public String getArchivePath() { return archivePath; }
+        public void setArchivePath(String archivePath) { this.archivePath = archivePath; }
     }
 
     public static class Destination {
         private String path = "/destination";
         private String tokenFileExtension;
+        private String archivePath;
         public String getPath() { return path; }
         public void setPath(String path) { this.path = path; }
         public String getTokenFileExtension() { return tokenFileExtension; }
         public void setTokenFileExtension(String tokenFileExtension) { this.tokenFileExtension = tokenFileExtension; }
+        public String getArchivePath() { return archivePath; }
+        public void setArchivePath(String archivePath) { this.archivePath = archivePath; }
     }
 
     public static class FileConfig {

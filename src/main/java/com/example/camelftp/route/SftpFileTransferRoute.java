@@ -35,6 +35,10 @@ public class SftpFileTransferRoute extends RouteBuilder {
         boolean sourceTokenEnabled = sourceTokenExt != null && !sourceTokenExt.isBlank();
         String destTokenExt = props.getDestination().getTokenFileExtension();
         boolean destTokenEnabled = destTokenExt != null && !destTokenExt.isBlank();
+        String sourceArchive = props.getSource().getArchivePath();
+        boolean sourceArchiveEnabled = sourceArchive != null && !sourceArchive.isBlank();
+        String destArchive = props.getDestination().getArchivePath();
+        boolean destArchiveEnabled = destArchive != null && !destArchive.isBlank();
         String filePattern = props.getFile().getPattern();
         String authParams = buildAuthParams();
         String sourcePath = toAbsoluteSftpPath(props.getSource().getPath());
@@ -50,7 +54,12 @@ public class SftpFileTransferRoute extends RouteBuilder {
         if (sourceTokenEnabled) {
             sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", sourceTokenExt));
         }
-        sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
+        if (sourceArchiveEnabled) {
+            sourceUriBuilder.append(String.format("&move=%s/${file:name}", toAbsoluteSftpPath(sourceArchive)));
+            sourceUriBuilder.append("&idempotent=true&readLock=changed&readLockMinLength=0&delay=5000");
+        } else {
+            sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
+        }
         String sourceUri = sourceUriBuilder.toString();
 
         // Destination SFTP endpoint for data files
@@ -76,6 +85,17 @@ public class SftpFileTransferRoute extends RouteBuilder {
                 .otherwise()
                     .to(destUri)
                     .log(LoggingLevel.INFO, "File written to destination: ${header.CamelFileName}");
+
+        if (destArchiveEnabled) {
+            String destArchiveUri = String.format(
+                "sftp://%s@%s:%d%s?%s",
+                props.getUsername(), props.getHost(), props.getPort(),
+                toAbsoluteSftpPath(destArchive), authParams
+            );
+            route
+                    .to(destArchiveUri)
+                    .log(LoggingLevel.INFO, "File archived at destination archive: ${header.CamelFileName}");
+        }
 
         if (destTokenEnabled) {
             route

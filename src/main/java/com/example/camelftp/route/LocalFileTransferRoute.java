@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+
 /**
  * Camel route for local file transfer — used for testing without an SFTP server.
  *
@@ -34,6 +36,12 @@ public class LocalFileTransferRoute extends RouteBuilder {
     @Value("${sftp.destination.token-file-extension:}")
     private String destTokenExtension;
 
+    @Value("${sftp.source.archive-path:}")
+    private String sourceArchivePath;
+
+    @Value("${sftp.destination.archive-path:}")
+    private String destArchivePath;
+
     @Value("${sftp.file.pattern}")
     private String filePattern;
 
@@ -47,6 +55,8 @@ public class LocalFileTransferRoute extends RouteBuilder {
     public void configure() throws Exception {
         boolean sourceTokenEnabled = sourceTokenExtension != null && !sourceTokenExtension.isBlank();
         boolean destTokenEnabled = destTokenExtension != null && !destTokenExtension.isBlank();
+        boolean sourceArchiveEnabled = sourceArchivePath != null && !sourceArchivePath.isBlank();
+        boolean destArchiveEnabled = destArchivePath != null && !destArchivePath.isBlank();
 
         // Source: poll local directory for files, optionally requiring a token (done) file
         StringBuilder sourceUriBuilder = new StringBuilder();
@@ -54,7 +64,15 @@ public class LocalFileTransferRoute extends RouteBuilder {
         if (sourceTokenEnabled) {
             sourceUriBuilder.append(String.format("&doneFileName=${file:name}%s", sourceTokenExtension));
         }
-        sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
+        if (sourceArchiveEnabled) {
+            // Move source file to archive directory after processing (use absolute path to avoid nesting)
+            String absoluteArchivePath = new File(sourceArchivePath).getAbsolutePath();
+            sourceUriBuilder.append(String.format("&move=%s/${file:name}", absoluteArchivePath));
+            sourceUriBuilder.append("&idempotent=true&readLock=changed&readLockMinLength=0&delay=5000");
+        } else {
+            // Leave source file in place, track with idempotent consumer
+            sourceUriBuilder.append("&idempotent=true&noop=true&readLock=changed&readLockMinLength=0&delay=5000");
+        }
         String sourceUri = sourceUriBuilder.toString();
 
         // Destination: write data file using temp file to ensure atomicity
@@ -78,6 +96,13 @@ public class LocalFileTransferRoute extends RouteBuilder {
                 .otherwise()
                     .to(destUri)
                     .log(LoggingLevel.INFO, "File written to local destination: ${header.CamelFileName}");
+
+        if (destArchiveEnabled) {
+            String destArchiveUri = String.format("file://%s", destArchivePath);
+            route
+                    .to(destArchiveUri)
+                    .log(LoggingLevel.INFO, "File archived at local destination archive: ${header.CamelFileName}");
+        }
 
         if (destTokenEnabled) {
             route

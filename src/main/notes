@@ -1,0 +1,11 @@
+# Step 1: Get the commit SHA for the tag
+curl -s https://api.github.com/repos/OWNER/REPO/git/refs/tags/TAG_NAME
+
+# Step 2: Find branches containing that commit
+curl -s "https://api.github.com/repos/OWNER/REPO/commits/COMMIT_SHA/branches-where-head" \
+  -H "Accept: application/vnd.github.v3+json"
+
+Oneliner:
+SHA=$(curl -s https://api.github.com/repos/OWNER/REPO/git/refs/tags/TAG_NAME | jq -r '.object.sha')
+curl -s "https://api.github.com/repos/OWNER/REPO/commits/$SHA/branches-where-head" \
+  -H "Accept: application/vnd.github.v3+json" | jq '.[].name'  
